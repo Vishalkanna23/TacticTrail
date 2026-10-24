@@ -1,3 +1,4 @@
+
 # TacticTrail Dataset Register
 
 This document tracks the cybersecurity knowledge sources used by TacticTrail. The original source files remain outside version control; only small, documented samples and reproducible processing scripts are committed.
@@ -67,3 +68,19 @@ MITRE ATT&CK licence (from the official terms):
 Official terms: https://attack.mitre.org/resources/legal-and-branding/terms-of-use/
 
 ATT&CK is not an exhaustive catalogue of attacks and does not, by itself, guarantee defensive coverage.
+
+
+## Week 1 Dataset Volume Verification
+
+- Active MITRE ATT&CK techniques: 706
+- Total description words: 128,585
+- Assumption: 500 words per page-equivalent
+- Estimated page-equivalents: 257.17
+- College Week 1 requirement: 50 page-equivalents
+- Result: Week 1 dataset volume requirement satisfied
+
+Calculation:
+128,585 / 500 = 257.17 page-equivalents
+
+Note: This is a text-volume estimate, not the
+number of original MITRE documentation pages.
