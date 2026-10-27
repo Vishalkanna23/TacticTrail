@@ -35,10 +35,9 @@ Analyst question:
 """
 
     response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt,
-    )
-
+    model="gemini-3.5-flash-lite",
+    contents=prompt,
+)
     if not response.text:
         raise RuntimeError("Gemini returned an empty response")
 
