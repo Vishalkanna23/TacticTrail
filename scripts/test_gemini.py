@@ -2,7 +2,6 @@
 from app.gemini_service import generate_answer
 from app.technique_search import search_technique
 
-
 technique = search_technique("T1566.001")
 
 if technique is None:
