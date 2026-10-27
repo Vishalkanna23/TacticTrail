@@ -1,19 +1,15 @@
 
-from fastapi.testclient import TestClient
-
-from app.main import app
-
-client = TestClient(app)
 
 
-def test_invalid_technique():
+
+def test_invalid_technique(client, technique_data):
     response = client.get(
         "/api/techniques/T999999/explain"
     )
 
     assert response.status_code == 404
 
-def test_valid_technique(monkeypatch):
+def test_valid_technique(client, technique_data, monkeypatch):
 
     def fake_generate_answer(question, evidence):
         return "This is a test explanation."
