@@ -24,6 +24,26 @@ def search_technique(technique_id):
     # No matching ID exists in our dataset
     return None
 
+def search_by_keyword(keyword):
+    keyword = keyword.strip().lower()
+
+    if not keyword:
+        return []
+
+    with open(DATA_FILE, encoding="utf-8") as file:
+        techniques = json.load(file)
+
+    results = []
+
+    for technique in techniques:
+        name = technique["name"].lower()
+        description = technique["description"].lower()
+
+        if keyword in name or keyword in description:
+            results.append(technique)
+
+    return results
+
 
 if __name__ == "__main__":
     user_id = input("Enter technique ID: ").strip().upper()
