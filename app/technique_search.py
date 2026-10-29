@@ -24,7 +24,43 @@ def search_technique(technique_id):
     # No matching ID exists in our dataset
     return None
 
+
 def search_by_keyword(keyword):
+    keyword = keyword.strip().lower()
+
+    if not keyword:
+        return []
+
+    with open(DATA_FILE, encoding="utf-8") as file:
+        techniques = json.load(file)
+
+    results = []
+
+    for technique in techniques:
+        name = technique["name"].lower()
+        description = technique["description"].lower()
+
+        score = 0
+
+        if keyword in name:
+            score += 10
+
+        if keyword in description:
+            score += 2
+
+        if score > 0:
+            results.append({
+                **technique,
+                "relevance_score": score
+            })
+
+    results.sort(
+        key=lambda technique: technique["relevance_score"],
+        reverse=True
+    )
+
+    return results
+
     keyword = keyword.strip().lower()
 
     if not keyword:

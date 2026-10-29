@@ -38,16 +38,19 @@ def keyword_search(keyword: str):
         ) from exc
 
     return {
+        
         "keyword": keyword,
         "total_matches": len(results),
         "results": [
             {
                 "technique_id": t["technique_id"],
                 "name": t["name"],
-                "url": t["url"]
+                "url": t["url"],
+                "relevance_score": t["relevance_score"]
             }
             for t in results[:10]
         ]
+        
     }
 
 
