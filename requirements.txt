@@ -3,3 +3,4 @@ uvicorn[standard]>=0.30
 pydantic-settings>=2.4
 google-genai
 python-dotenv
+rank-bm25>=0.2.2
