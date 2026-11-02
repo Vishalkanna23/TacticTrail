@@ -1,4 +1,4 @@
-
+from app.semantic_search import search_semantic
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -91,6 +91,30 @@ def bm25_search(query: str):
         ],
     }
 
+
+@app.get("/api/techniques/semantic")
+def semantic_search_endpoint(query: str):
+    if not query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Search query cannot be empty",
+        )
+
+    results = search_semantic(query)
+
+    return {
+        "query": query,
+        "total_matches": len(results),
+        "results": [
+            {
+                "technique_id": technique["technique_id"],
+                "name": technique["name"],
+                "url": technique.get("url"),
+                "similarity_score": technique["similarity_score"],
+            }
+            for technique in results
+        ],
+    }
 
 # 4. Search using exact MITRE technique ID
 @app.get("/api/techniques/{technique_id}")
