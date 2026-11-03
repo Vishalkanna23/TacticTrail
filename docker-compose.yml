@@ -1,0 +1,9 @@
+services:
+  tactictrail-api:
+    build: .
+    image: tactictrail:latest
+    container_name: tactictrail-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
