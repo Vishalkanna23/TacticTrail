@@ -23,7 +23,17 @@ def health(settings: SettingsDep) -> dict:
         "environment": settings.environment,
     }
 
-
+@app.get("/usage")
+def get_usage():
+    return {
+        "project": "TacticTrail",
+        "description": "MITRE ATT&CK technique search and AI explanation API",
+        "available_search_methods": [
+            "keyword",
+            "bm25",
+            "semantic"
+        ]
+    }
 # 2. Keyword search
 @app.get("/api/techniques/search")
 def keyword_search(keyword: str):
