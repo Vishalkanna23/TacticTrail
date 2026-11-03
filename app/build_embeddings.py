@@ -7,7 +7,6 @@ from sentence_transformers import SentenceTransformer
 
 from app import technique_search
 
-
 EMBEDDINGS_FILE = Path("data/embeddings/technique_embeddings.npy")
 MODEL_NAME = "all-MiniLM-L6-v2"
 

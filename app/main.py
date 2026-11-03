@@ -1,4 +1,3 @@
-from app.semantic_search import search_semantic
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -6,6 +5,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from app.bm25_search import search_bm25
 from app.config import Settings, get_settings
 from app.gemini_service import generate_answer
+from app.semantic_search import search_semantic
 from app.technique_search import search_by_keyword, search_technique
 
 app = FastAPI(title="TacticTrail", version="0.1.0")
