@@ -1,13 +1,15 @@
 
 import json
-
+from functools import lru_cache
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
 from app import technique_search
 from app.build_embeddings import EMBEDDINGS_FILE, MODEL_NAME
 
-
+@lru_cache(maxsize=1)
+def get_model():
+    return SentenceTransformer(MODEL_NAME)
 def search_semantic(query, top_k=5):
     if not query.strip():
         return []
@@ -28,7 +30,7 @@ def search_semantic(query, top_k=5):
         )
 
     # Load the model and encode only the user's query
-    model = SentenceTransformer(MODEL_NAME)
+    model = get_model()
 
     query_embedding = model.encode(
         query,
