@@ -6,6 +6,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY data ./data
+COPY models/minilm-onnx ./models/minilm-onnx
 RUN useradd --create-home appuser && mkdir -p /app/logs && chown -R appuser /app
 USER appuser
 EXPOSE 8000

@@ -1,15 +1,29 @@
 
 import json
 from functools import lru_cache
+from pathlib import Path
+
 import numpy as np
-from sentence_transformers import SentenceTransformer, util
+import onnxruntime as ort
+from transformers import AutoTokenizer
 
 from app import technique_search
-from app.build_embeddings import EMBEDDINGS_FILE, MODEL_NAME
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_DIR = BASE_DIR / "models" / "minilm-onnx"
+EMBEDDINGS_FILE = BASE_DIR / "data" / "embeddings" / "technique_embeddings.npy"
+
 
 @lru_cache(maxsize=1)
 def get_model():
-    return SentenceTransformer(MODEL_NAME)
+    session = ort.InferenceSession(
+        str(MODEL_DIR / "model.onnx"),
+        providers=["CPUExecutionProvider"],
+    )
+    tokenizer = AutoTokenizer.from_pretrained(str(MODEL_DIR))
+    return session, tokenizer
+
+
 def search_semantic(query, top_k=5):
     if not query.strip():
         return []
@@ -20,7 +34,6 @@ def search_semantic(query, top_k=5):
     if not techniques:
         return []
 
-    # Load the embeddings we generated earlier
     document_embeddings = np.load(EMBEDDINGS_FILE)
 
     if len(document_embeddings) != len(techniques):
@@ -29,25 +42,32 @@ def search_semantic(query, top_k=5):
             "Run python -m app.build_embeddings again."
         )
 
-    # Load the model and encode only the user's query
-    model = get_model()
+    # Generate the query embedding using ONNX Runtime
+    session, tokenizer = get_model()
 
-    query_embedding = model.encode(
-        query,
-        convert_to_tensor=True,
-        normalize_embeddings=True,
-    )
+    inputs = tokenizer(query, return_tensors="np")
 
-    # Compare the query against the saved embeddings
-    scores = util.cos_sim(query_embedding, document_embeddings)[0]
+    onnx_inputs = {
+        item.name: inputs[item.name]
+        for item in session.get_inputs()
+    }
 
-    ranked_indices = scores.argsort(descending=True)[:top_k]
+    query_embedding = session.run(
+        ["sentence_embedding"],
+        onnx_inputs,
+    )[0][0]
+
+    # Compare normalized query and document embeddings
+    scores = document_embeddings @ query_embedding
+
+    # Rank techniques by similarity
+    ranked_indices = np.argsort(scores)[::-1][:top_k]
 
     results = []
 
     for index in ranked_indices:
-        technique = techniques[index.item()].copy()
-        technique["similarity_score"] = float(scores[index].item())
+        technique = techniques[int(index)].copy()
+        technique["similarity_score"] = float(scores[index])
         results.append(technique)
 
     return results
