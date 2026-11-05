@@ -10,13 +10,23 @@ Commit after every class. Tag every Friday: `git tag week-N && git push origin w
 - [ ] 50+ pages collected, DATASET.md filled, sample in data/sample/
 - [ ] Tag week-1 pushed
 
+
 ## Week 2 (tag week-2 by Fri 30 Oct)
+
 - [ ] POST /chat calls an LLM and returns structured JSON
 - [ ] Streaming, timeouts, retry and a fallback model
-- [ ] Cost log + GET /usage
+- [x] Cost log + GET /usage (endpoint implemented; cost logging needs verification)
 - [ ] Docker Compose (API + Postgres/pgvector) runs
-- [ ] CI green, live link in README
+- [x] CI green, live link in README (deployment working; README needs updating)
 - [ ] Tag week-2 pushed
+
+### Additional completed work
+- [x] Keyword search
+- [x] BM25 search
+- [x] Semantic search using ONNX Runtime
+- [x] Gemini AI explanations through /api/techniques/{technique_id}/explain
+- [x] Docker deployment on Render
+
 
 ## Week 3 (tag week-3 by Fri 6 Nov)
 - [ ] Parser keeps page numbers and headings

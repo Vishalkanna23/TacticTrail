@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from pydantic import BaseModel
 
 from app.bm25_search import search_bm25
 from app.config import Settings, get_settings
@@ -13,16 +14,22 @@ app = FastAPI(title="TacticTrail", version="0.1.0")
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
+class ChatRequest(BaseModel):
+    question: str
+
+
 # 1. Health check
 @app.get("/health")
 def health(settings: SettingsDep) -> dict:
-    """Liveness: the process is up. Must be fast and must not call the LLM or DB."""
+    """Liveness: the process is up and running."""
     return {
         "status": "ok",
         "app": settings.app_name,
         "environment": settings.environment,
     }
 
+
+# 2. Usage endpoint
 @app.get("/usage")
 def get_usage():
     return {
@@ -31,10 +38,12 @@ def get_usage():
         "available_search_methods": [
             "keyword",
             "bm25",
-            "semantic"
-        ]
+            "semantic",
+        ],
     }
-# 2. Keyword search
+
+
+# 3. Keyword search
 @app.get("/api/techniques/search")
 def keyword_search(keyword: str):
     keyword = keyword.strip()
@@ -68,7 +77,7 @@ def keyword_search(keyword: str):
     }
 
 
-# 3. BM25 search
+# 4. BM25 search
 @app.get("/api/techniques/bm25")
 def bm25_search(query: str):
     query = query.strip()
@@ -102,6 +111,7 @@ def bm25_search(query: str):
     }
 
 
+# 5. Semantic search
 @app.get("/api/techniques/semantic")
 def semantic_search_endpoint(query: str):
     if not query.strip():
@@ -126,7 +136,8 @@ def semantic_search_endpoint(query: str):
         ],
     }
 
-# 4. Search using exact MITRE technique ID
+
+# 6. Exact MITRE technique ID search
 @app.get("/api/techniques/{technique_id}")
 def get_technique(technique_id: str):
     technique_id = technique_id.strip().upper()
@@ -148,7 +159,7 @@ def get_technique(technique_id: str):
     return result
 
 
-# 5. Explain technique using Gemini
+# 7. Explain technique using Gemini
 @app.get("/api/techniques/{technique_id}/explain")
 def explain_technique(technique_id: str):
     technique_id = technique_id.strip().upper()
@@ -184,4 +195,53 @@ def explain_technique(technique_id: str):
         "name": technique["name"],
         "answer": answer,
         "source": technique["url"],
+    }
+
+
+# 8. Chat with Gemini using MITRE ATT&CK evidence
+@app.post("/chat")
+def chat(request: ChatRequest):
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty",
+        )
+
+    # Find relevant MITRE techniques
+    results = search_semantic(question, top_k=3)
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail="No relevant techniques found",
+        )
+
+    # Prepare evidence for Gemini
+    evidence = "\n\n".join(
+        f"ID: {technique['technique_id']}\n"
+        f"Name: {technique['name']}\n"
+        f"Description: {technique['description']}\n"
+        f"Source: {technique['url']}"
+        for technique in results
+    )
+
+    # Generate an evidence-grounded answer
+    answer = generate_answer(
+        question=question,
+        evidence=evidence,
+    )
+
+    return {
+        "question": question,
+        "answer": answer,
+        "sources": [
+            {
+                "technique_id": technique["technique_id"],
+                "name": technique["name"],
+                "url": technique["url"],
+            }
+            for technique in results
+        ],
     }
