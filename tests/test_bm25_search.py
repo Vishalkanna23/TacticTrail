@@ -1,4 +1,3 @@
-
 import json
 
 from app import technique_search

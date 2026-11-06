@@ -1,4 +1,3 @@
-
 import json
 import re
 
@@ -34,14 +33,8 @@ def search_bm25(query):
 
     for technique, score in zip(techniques, scores, strict=True):
         if score > 0:
-            results.append({
-                **technique,
-                "bm25_score": float(score)
-            })
+            results.append({**technique, "bm25_score": float(score)})
 
-    results.sort(
-        key=lambda technique: technique["bm25_score"],
-        reverse=True
-    )
+    results.sort(key=lambda technique: technique["bm25_score"], reverse=True)
 
     return results
