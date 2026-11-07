@@ -8,6 +8,7 @@ from app.config import Settings, get_settings
 from app.gemini_service import generate_answer
 from app.semantic_search import search_semantic
 from app.technique_search import search_by_keyword, search_technique
+from app.usage_tracker import get_usage_totals
 
 app = FastAPI(title="TacticTrail", version="0.1.0")
 
@@ -40,6 +41,7 @@ def get_usage():
             "bm25",
             "semantic",
         ],
+        "gemini_usage": get_usage_totals(),
     }
 
 
