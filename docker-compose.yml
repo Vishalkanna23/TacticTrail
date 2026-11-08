@@ -7,3 +7,26 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    depends_on:
+      tactictrail-db:
+        condition: service_healthy
+
+  tactictrail-db:
+    image: pgvector/pgvector:pg16
+    container_name: tactictrail-db
+    environment:
+      POSTGRES_DB: tactictrail
+      POSTGRES_USER: tactictrail
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tactictrail -d tactictrail"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
