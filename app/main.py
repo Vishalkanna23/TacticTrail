@@ -1,11 +1,13 @@
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from psycopg import OperationalError
 from pydantic import BaseModel
 
 from app.bm25_search import search_bm25
 from app.config import Settings, get_settings
 from app.gemini_service import generate_answer
+from app.pgvector_search import search_pgvector
 from app.semantic_search import search_semantic
 from app.technique_search import search_by_keyword, search_technique
 from app.usage_tracker import get_usage_totals
@@ -136,6 +138,29 @@ def semantic_search_endpoint(query: str):
             }
             for technique in results
         ],
+    }
+
+# PostgreSQL + pgvector similarity search
+@app.get("/api/techniques/pgvector")
+def pgvector_search_endpoint(query: str):
+    if not query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Search query cannot be empty",
+        )
+
+    try:
+        results = search_pgvector(query, top_k=5)
+    except OperationalError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="PostgreSQL vector search is unavailable",
+        ) from exc
+
+    return {
+        "query": query,
+        "total_matches": len(results),
+        "results": results,
     }
 
 
