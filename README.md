@@ -136,3 +136,63 @@ uvicorn app.main:app --reload
 TacticTrail is a student project and is **not affiliated with or endorsed by MITRE**. ATT&CK® is a registered trademark of The MITRE Corporation. Review the [MITRE ATT&CK Terms of Use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/) before downloading or redistributing its data, and reproduce the applicable MITRE copyright designation and license with any redistributed copies.
 
 > © 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.
+
+
+## Week 2 — RAG Chat and PostgreSQL Integration
+
+TacticTrail is a cybersecurity assistant built using FastAPI,
+MITRE ATT&CK, semantic search, PostgreSQL, pgvector, and Gemini.
+
+### Features Implemented
+
+- MITRE ATT&CK technique search using keywords and BM25
+- Semantic search using ONNX embeddings
+- PostgreSQL + pgvector similarity search
+- 706 MITRE ATT&CK techniques stored with embeddings
+- Gemini-powered cybersecurity question answering
+- Streaming AI responses with fallback handling
+- MITRE technique ID validation for AI responses
+- Gemini token usage and estimated cost tracking
+- Docker Compose integration for FastAPI and PostgreSQL
+- Automated testing using pytest and Ruff
+- GitHub Actions CI
+
+### Run Locally
+
+1. Clone the repository.
+2. Configure the required variables in a local `.env` file.
+3. Start Docker Desktop.
+4. Run:
+
+```powershell
+docker compose up -d --build
+```
+
+5. Open the API documentation:
+
+http://localhost:8000/docs
+
+### Important Endpoints
+
+| Endpoint | Description |
+|---|---|
+| GET /health | Application health |
+| GET /usage | Gemini usage statistics |
+| GET /api/techniques/search | Keyword search |
+| GET /api/techniques/bm25 | BM25 search |
+| GET /api/techniques/semantic | Semantic search |
+| GET /api/techniques/pgvector | PostgreSQL vector search |
+| POST /chat | Evidence-grounded Gemini chat |
+| POST /chat/stream | Streaming Gemini responses |
+
+### Testing
+
+Run:
+
+```powershell
+python -m pytest -q
+python -m ruff check .
+```
+
+Week 2 verification: 31 automated tests passed.
+GitHub Actions CI: successful.
