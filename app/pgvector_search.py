@@ -25,13 +25,20 @@ def search_pgvector(query: str, top_k: int = 5):
     }
 
     query_embedding = session.run(
-        ["sentence_embedding"], onnx_inputs
+        ["sentence_embedding"],
+        onnx_inputs,
     )[0][0].astype(np.float32)
 
-    # Connect to the local PostgreSQL database
+    # Database settings:
+    # Windows: 127.0.0.1:5433
+    # Docker: tactictrail-db:5432
+    db_host = os.getenv("POSTGRES_HOST", "127.0.0.1")
+    db_port = int(os.getenv("POSTGRES_PORT", "5433"))
+
+    # Connect to PostgreSQL
     with psycopg.connect(
-        host="127.0.0.1",
-        port=5433,
+        host=db_host,
+        port=db_port,
         dbname="tactictrail",
         user="tactictrail",
         password=os.environ["POSTGRES_PASSWORD"],

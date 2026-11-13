@@ -1,3 +1,4 @@
+
 services:
   tactictrail-api:
     build: .
@@ -7,6 +8,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      POSTGRES_HOST: tactictrail-db
+      POSTGRES_PORT: "5432"
     depends_on:
       tactictrail-db:
         condition: service_healthy

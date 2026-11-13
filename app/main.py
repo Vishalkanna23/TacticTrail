@@ -1,12 +1,15 @@
+
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from psycopg import OperationalError
 from pydantic import BaseModel
 
 from app.bm25_search import search_bm25
 from app.config import Settings, get_settings
-from app.gemini_service import generate_answer
+from app.gemini_service import generate_answer, stream_answer
+from app.mitre_validation import find_unverified_ids, validate_stream
 from app.pgvector_search import search_pgvector
 from app.semantic_search import search_semantic
 from app.technique_search import search_by_keyword, search_technique
@@ -115,7 +118,7 @@ def bm25_search(query: str):
     }
 
 
-# 5. Semantic search
+# 5. Semantic search using ONNX
 @app.get("/api/techniques/semantic")
 def semantic_search_endpoint(query: str):
     if not query.strip():
@@ -140,7 +143,8 @@ def semantic_search_endpoint(query: str):
         ],
     }
 
-# PostgreSQL + pgvector similarity search
+
+# 6. PostgreSQL + pgvector similarity search
 @app.get("/api/techniques/pgvector")
 def pgvector_search_endpoint(query: str):
     if not query.strip():
@@ -164,7 +168,7 @@ def pgvector_search_endpoint(query: str):
     }
 
 
-# 6. Exact MITRE technique ID search
+# 7. Exact MITRE technique ID search
 @app.get("/api/techniques/{technique_id}")
 def get_technique(technique_id: str):
     technique_id = technique_id.strip().upper()
@@ -186,7 +190,7 @@ def get_technique(technique_id: str):
     return result
 
 
-# 7. Explain technique using Gemini
+# 8. Explain technique using Gemini
 @app.get("/api/techniques/{technique_id}/explain")
 def explain_technique(technique_id: str):
     technique_id = technique_id.strip().upper()
@@ -225,7 +229,7 @@ def explain_technique(technique_id: str):
     }
 
 
-# 8. Chat with Gemini using MITRE ATT&CK evidence
+# 9. Chat with Gemini using MITRE ATT&CK evidence
 @app.post("/chat")
 def chat(request: ChatRequest):
     question = request.question.strip()
@@ -236,7 +240,7 @@ def chat(request: ChatRequest):
             detail="Question cannot be empty",
         )
 
-    # Find relevant MITRE techniques
+    # Retrieve relevant MITRE techniques
     results = search_semantic(question, top_k=3)
 
     if not results:
@@ -260,6 +264,16 @@ def chat(request: ChatRequest):
         evidence=evidence,
     )
 
+    # Validate generated MITRE technique IDs
+    unverified_ids = find_unverified_ids(answer, evidence)
+
+    if unverified_ids:
+        answer = (
+            "I could not verify all MITRE ATT&CK technique IDs "
+            "in the generated response against the retrieved evidence. "
+            "Please refer to the verified MITRE sources below."
+        )
+
     return {
         "question": question,
         "answer": answer,
@@ -272,3 +286,44 @@ def chat(request: ChatRequest):
             for technique in results
         ],
     }
+
+
+# 10. Stream Gemini responses using MITRE ATT&CK evidence
+@app.post("/chat/stream")
+def chat_stream(request: ChatRequest):
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty",
+        )
+
+    # Retrieve relevant MITRE techniques
+    results = search_semantic(question, top_k=3)
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail="No relevant techniques found",
+        )
+
+    # Build evidence for Gemini
+    evidence = "\n\n".join(
+        f"ID: {technique['technique_id']}\n"
+        f"Name: {technique['name']}\n"
+        f"Description: {technique['description']}\n"
+        f"Source: {technique['url']}"
+        for technique in results
+    )
+
+        # Generate Gemini response chunks
+    chunks = stream_answer(question, evidence)
+
+    # Validate MITRE IDs before sending chunks to the user
+    safe_chunks = validate_stream(chunks, evidence)
+
+    return StreamingResponse(
+        safe_chunks,
+        media_type="text/plain",
+    )
