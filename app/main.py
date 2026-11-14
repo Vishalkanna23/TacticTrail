@@ -1,4 +1,3 @@
-
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -9,6 +8,11 @@ from pydantic import BaseModel
 from app.bm25_search import search_bm25
 from app.config import Settings, get_settings
 from app.gemini_service import generate_answer, stream_answer
+from app.ingestion.citation_validation import (
+    CITATION_PATTERN,
+    find_unverified_citations,
+)
+from app.ingestion.document_search import search_documents
 from app.mitre_validation import find_unverified_ids, validate_stream
 from app.pgvector_search import search_pgvector
 from app.semantic_search import search_semantic
@@ -317,7 +321,7 @@ def chat_stream(request: ChatRequest):
         for technique in results
     )
 
-        # Generate Gemini response chunks
+    # Generate Gemini response chunks
     chunks = stream_answer(question, evidence)
 
     # Validate MITRE IDs before sending chunks to the user
@@ -327,3 +331,88 @@ def chat_stream(request: ChatRequest):
         safe_chunks,
         media_type="text/plain",
     )
+
+
+# Ask questions using retrieved PDF documents
+@app.post("/ask")
+def ask_documents(request: ChatRequest):
+    question = request.question.strip()
+
+    if not question:
+        raise HTTPException(
+            status_code=400,
+            detail="Question cannot be empty",
+        )
+
+    # Retrieve relevant PDF chunks from PostgreSQL
+    try:
+        results = search_documents(question, top_k=3)
+    except OperationalError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Document database is unavailable",
+        ) from exc
+
+    if not results:
+        raise HTTPException(
+            status_code=404,
+            detail="No document evidence found",
+        )
+
+    # Prepare retrieved evidence for Gemini
+    evidence = "\n\n".join(
+        f"Document: {result['document']}\n"
+        f"Page: {result['page']}\n"
+        f"Heading: {result.get('heading') or 'Unknown'}\n"
+        f"Text: {result['text']}"
+        for result in results
+    )
+
+    # Ask Gemini to answer using the retrieved evidence
+
+    # Generate an answer with document-page citations
+    answer = generate_answer(
+        question=(
+            f"{question}\n"
+            "Answer using only the retrieved document evidence. "
+            "Include a citation for each factual paragraph using "
+            "the exact format [document-name.pdf, page N]. "
+            "Use only document names and page numbers provided "
+            "in the evidence. Never invent citations. "
+            "If the evidence is insufficient, say so."
+        ),
+        evidence=evidence,
+    )
+
+    # Check whether Gemini cited only retrieved pages
+    unverified_citations = find_unverified_citations(
+        answer,
+        results,
+    )
+
+    # Require at least one valid in-text citation
+    if unverified_citations or not CITATION_PATTERN.search(answer):
+        answer = (
+            "I could not produce an answer with verified "
+            "in-text document citations. Please refer to "
+            "the retrieved source pages listed below."
+        )
+
+    # Build citation references using database metadata
+    citations = list(dict.fromkeys(f"[{result['document']}, page {result['page']}]" for result in results))
+
+    return {
+        "question": question,
+        "answer": answer,
+        "citations": citations,
+        "sources": [
+            {
+                "document": result["document"],
+                "page": result["page"],
+                "heading": result.get("heading"),
+                "chunk_id": result["chunk_id"],
+                "similarity_score": result["similarity_score"],
+            }
+            for result in results
+        ],
+    }
