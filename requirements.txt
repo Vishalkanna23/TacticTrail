@@ -9,3 +9,4 @@ onnxruntime==1.31.1
 transformers==4.57.6
 psycopg[binary]==3.3.9
 pgvector==0.5.1
+pymupdf>=1.24
