@@ -1,7 +1,7 @@
 # TacticTrail
 
-**Project ID:** B-ENT-05  
-**Status:** Week 1 — starter application; core search and AI features are planned  
+**Project ID:** B-ENT-05
+**Status:** Week 3 implementation complete; final Git release pending (16 November 2026)
 **Repository:** https://github.com/Vishalkanna23/TacticTrail
 
 > An ID-safe threat-intelligence desk that maps observed attacker behavior to verified MITRE ATT&CK techniques, detections, and mitigations.
@@ -16,7 +16,7 @@ The intended user is a **threat-intelligence analyst or SOC analyst at a Bengalu
 
 ## Proposed solution
 
-TacticTrail will let analysts:
+TacticTrail is being developed to let analysts:
 
 - Search for a technique using its exact ATT&CK ID, name, or a natural-language incident description.
 - See the verified **technique ID, technique name, tactic, official ATT&CK link, and supporting evidence**.
@@ -30,26 +30,32 @@ Every technique-related answer must be checked against ingested MITRE ATT&CK rec
 
 ## Hardest problem (my interview story)
 
-**Exact-term hybrid search with re-ranking.** Semantic search alone can retrieve a related but wrong technique when IDs or sub-technique names look similar. The planned retrieval system combines:
+**Exact-term hybrid search with re-ranking.** Semantic search alone can retrieve a related but wrong technique when IDs or sub-technique names look similar. The system already provides separate search methods; combining and re-ranking them is future work:
 
-1. **Exact-ID lookup** for ATT&CK identifiers, with strict validation.
-2. **BM25 keyword search** for technique names, group names, and technical terms.
-3. **Vector similarity search** for natural-language descriptions.
-4. **Re-ranking and verification** to prioritize the correct evidence before generating a cited answer.
+1. **Exact-ID lookup** for ATT&CK identifiers, with strict validation (implemented).
+2. **BM25 keyword search** for technique names and technical terms (implemented).
+3. **Vector similarity search** for natural-language descriptions (implemented).
+4. **Hybrid re-ranking** to prioritize evidence across the search methods (planned).
 
-The system will be tested using **100 representative analyst queries**. The goal is to have the correct technique ID in the **top three results for at least 92 of 100 queries (Recall@3 >= 92%)**, with **zero invented technique IDs** in the generated answers. Retrieval accuracy and final-answer correctness will be measured separately.
+A planned later benchmark will use **100 representative analyst queries**. The goal is to have the correct technique ID in the **top three results for at least 92 of 100 queries (Recall@3 >= 92%)**, with **zero invented technique IDs** in the generated answers. Retrieval accuracy and final-answer correctness will be measured separately.
 
 ## Dataset
 
-**Authoritative source:** [MITRE ATT&CK](https://attack.mitre.org/), using the official [STIX 2.1 dataset repository](https://github.com/mitre-attack/attack-stix-data).
+**MITRE ATT&CK source:** [MITRE ATT&CK](https://attack.mitre.org/) using the official [STIX 2.1 data repository](https://github.com/mitre-attack/attack-stix-data).
 
-| Source | Link | Documents / records | Pages / page equivalents | Licence / terms |
-|---|---|---|---|---|
-| MITRE ATT&CK — Enterprise, Mobile and ICS | [Official STIX data](https://github.com/mitre-attack/attack-stix-data) | Target: 1,500+ technique, group and software records/pages | Target: 2,000+ page equivalents; conversion method to be documented | [MITRE ATT&CK Terms of Use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/) |
+**Current technique index:** Enterprise ATT&CK v20.0, with **706 active techniques and sub-techniques** indexed using 384-dimensional embeddings.
 
-**Current ingestion:** Not yet recorded or verified. Actual downloaded file counts, record counts, ATT&CK version, download date, and the page-equivalent calculation will be documented in [DATASET.md](DATASET.md). Week 1 aims to collect the first 50+ page equivalents; Week 3 aims to ingest at least 500.
+**Current document knowledge base:**
 
-The dataset will include techniques and sub-techniques, groups, software, mitigations, and relevant ATT&CK relationships. Public ATT&CK data and private, tenant-scoped sample incidents will be stored and accessed separately.
+| Document | Indexed PDF pages | Stored chunks |
+|---|---:|---:|
+| NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations | 492 | 2,460 |
+| NIST SP 800-61 Rev. 3 — Incident Response Recommendations and Considerations for Cybersecurity Risk Management | 48 | 170 |
+| **Total** | **540** | **2,630** |
+
+All 2,630 stored document chunks were confirmed to have embeddings in the local PostgreSQL database on 16 November 2026. The technique records and NIST document chunks are distinct datasets.
+
+See [DATASET.md](DATASET.md) for dataset provenance and collection details. Mobile/ICS ATT&CK coverage, additional relationships, and tenant-scoped sample incident data are potential later extensions, not current verified capabilities.
 
 ## Example analyst questions
 
@@ -58,19 +64,40 @@ The dataset will include techniques and sub-techniques, groups, software, mitiga
 3. Which known threat groups have used scheduled tasks for persistence?
 4. In the sample alerts for my business unit, which ATT&CK techniques occurred most often this month? *(Planned agent feature.)*
 
-The full set of **10 evaluation questions** will be maintained in [docs/QUESTIONS.md](docs/QUESTIONS.md) as a separate Week 1 deliverable.
+See [docs/QUESTIONS.md](docs/QUESTIONS.md) for the analyst-question set. The **10 PDF retrieval evaluation questions** and their scores are recorded separately in [docs/EVAL_v0.md](docs/EVAL_v0.md).
 
-## Planned technology and architecture
+## Technology and architecture
 
-- **Backend:** Python and FastAPI (starter already present).
-- **Threat-intelligence data:** Official MITRE ATT&CK STIX 2.1 JSON.
-- **Structured storage:** PostgreSQL (planned).
-- **Retrieval:** exact-ID lookup, BM25, vector search/pgvector, and re-ranking (planned).
-- **Answering:** an LLM grounded in retrieved ATT&CK evidence, with citations (planned).
-- **Agent:** read-only, tenant-authorized SQL queries over sample alert data, plus TacticTrail retrieval tools (Weeks 7–12).
-- **Engineering:** automated tests, GitHub Actions, Docker and a deployed demo (to be validated or built as milestones progress).
+### Implemented
 
-**Planned answer flow:** Analyst question -> validated tenant context -> exact-ID / BM25 / vector retrieval -> re-ranking -> ATT&CK ID verification -> cited answer.
+- **Backend:** Python and FastAPI.
+- **Threat-intelligence dataset:** MITRE ATT&CK Enterprise v20.0 (706 active techniques/sub-techniques).
+- **Document knowledge base:** NIST SP 800-53r5 and SP 800-61r3 PDFs.
+- **Database:** PostgreSQL and pgvector for vector search.
+- **Retrieval:** Exact ATT&CK ID lookup, keyword search, BM25, MiniLM semantic search, and pgvector similarity search.
+- **Embeddings:** MiniLM using ONNX Runtime; 384-dimensional vectors.
+- **AI integration:** Google Gemini for retrieval-assisted answers and explanation endpoints, including streaming and fallback handling.
+- **Document RAG:** PyMuPDF parsing, overlapping text chunks, vector retrieval, `/ask` responses with document-page citations, and citation-format validation.
+- **Engineering:** Docker Compose, pytest, Ruff, GitHub Actions CI, and a recorded Render deployment.
+
+### Planned
+
+- Hybrid ranking that combines the separate search methods and re-ranks candidates.
+- Sentence-aware document chunking and stronger claim-level citation verification.
+- React frontend and cybersecurity dashboard.
+- User authentication and database-enforced tenant isolation.
+- Read-only AI agent with authorized access to sample incident data.
+
+### Current document question-answering flow
+
+1. Receive a question at `POST /ask`.
+2. Convert the question to a MiniLM embedding.
+3. Retrieve the top three matching document chunks from PostgreSQL/pgvector.
+4. Ask Gemini to answer using the retrieved passages and document-page references.
+5. Validate that cited document/page pairs occur in the retrieved evidence.
+6. Return the answer and source metadata, or a fallback when citations are invalid or missing.
+
+**Important limitation:** Citation validation confirms that a cited document/page was retrieved; it does **not** prove that every answer claim is supported by that page.
 
 ## Security and reliability requirements
 
@@ -91,16 +118,42 @@ The full set of **10 evaluation questions** will be maintained in [docs/QUESTION
 | AI agent | 7–9 | Agent using TacticTrail, tools/MCP, memory, planning and human approval |
 | Hardening and final demo | 10–12 | Agent tests, safe background jobs, cost controls and final demonstration |
 
-**Demo Day 1:** 28 November 2026  
+**Demo Day 1:** 28 November 2026
 **Final Demo Day:** 9 January 2027
 
 See [PROGRESS.md](PROGRESS.md) for the repository's detailed weekly checklist. A planned milestone is **not** a completed feature.
 
 ## Current implementation status
 
-The repository currently contains a **FastAPI starter** with a `GET /health` endpoint, dependency files, tests and workflow scaffolding. The RAG index, hybrid retrieval, authentication, full dataset ingestion, and AI agent are **not yet confirmed as implemented**. This section will be updated when features are built and tested.
+TacticTrail has completed the Week 2 backend foundation and the core Week 3 PDF ingestion, document retrieval, and citation-based question-answering work. Week 3 release/tagging is still pending.
 
-## Run the starter locally
+### Verified Week 3 results
+
+| Measure | Result |
+|---|---:|
+| NIST PDFs indexed | 2 |
+| Distinct document pages represented | 540 |
+| Stored document chunks | 2,630 |
+| Chunks missing embeddings | 0 |
+| Retrieval evaluation questions | 10 |
+| AI-assessed Hit Rate@3 | 100.00% (10/10 questions) |
+| AI-assessed Precision@3 | 70.00% (21/30 chunks) |
+| Provisional adjusted Hit Rate@3 | 80.00% (8/10 questions) |
+| Provisional adjusted Precision@3 | 63.33% (19/30 chunks) |
+| Automated tests | 43 passed |
+
+The provisional adjusted metrics correct **two** AI judgments after manually inspecting **three** chunks, while leaving the other 28 AI labels unchanged. They are **not** a fully human-labeled benchmark. The metrics evaluate **retrieval**, not factual correctness of generated answers.
+
+The local verification also passed `python -m ruff check .`; pytest reported one non-blocking third-party deprecation warning. Detailed methodology and limitations are in [docs/EVAL_v0.md](docs/EVAL_v0.md).
+
+### Remaining work
+
+- Commit final Week 3 documentation and evaluation files; push the `week-3` Git tag.
+- Build the React frontend in Week 4.
+- Improve chunk boundaries, relevance judging, retrieval ranking, and citation grounding.
+- Implement authentication, tenant isolation, and later AI agent features.
+
+## Run TacticTrail locally
 
 ### Windows PowerShell (VS Code terminal)
 
@@ -115,7 +168,7 @@ Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-If you already cloned the repository, skip `git clone` and open your existing `TacticTrail` folder. In a browser, visit **http://127.0.0.1:8000/health**. This endpoint is a startup health check; it is **not** a working AI search endpoint.
+If you already cloned the repository, skip `git clone` and open your existing `TacticTrail` folder. In a browser, visit **http://127.0.0.1:8000/health**. This endpoint checks backend health. API routes are documented at **http://127.0.0.1:8000/docs**; database- and Gemini-backed features also require their corresponding services and environment configuration.
 
 ### macOS / Linux
 
@@ -129,7 +182,9 @@ uvicorn app.main:app --reload
 
 ## Live link
 
-**Not deployed yet.** A verified deployment URL will be added as part of the Week 2 milestone.
+Backend deployment recorded during Week 2: https://tactictrail.onrender.com
+
+The deployed service may not yet include all locally implemented Week 3 features.
 
 ## MITRE ATT&CK attribution and terms
 
@@ -140,59 +195,51 @@ TacticTrail is a student project and is **not affiliated with or endorsed by MIT
 
 ## Week 2 — RAG Chat and PostgreSQL Integration
 
-TacticTrail is a cybersecurity assistant built using FastAPI,
-MITRE ATT&CK, semantic search, PostgreSQL, pgvector, and Gemini.
+The Week 2 checkpoint established the backend foundation used by the Week 3 document-RAG work.
 
-### Features Implemented
+### Features implemented
 
-- MITRE ATT&CK technique search using keywords and BM25
-- Semantic search using ONNX embeddings
-- PostgreSQL + pgvector similarity search
-- 706 MITRE ATT&CK techniques stored with embeddings
-- Gemini-powered cybersecurity question answering
-- Streaming AI responses with fallback handling
-- MITRE technique ID validation for AI responses
-- Gemini token usage and estimated cost tracking
-- Docker Compose integration for FastAPI and PostgreSQL
-- Automated testing using pytest and Ruff
-- GitHub Actions CI
+- MITRE ATT&CK technique search using keywords and BM25.
+- Semantic search using MiniLM ONNX embeddings.
+- PostgreSQL + pgvector similarity search.
+- 706 active MITRE ATT&CK techniques/sub-techniques stored with embeddings.
+- Gemini-assisted cybersecurity question answering.
+- Streaming responses, model fallback, and error handling.
+- MITRE technique ID validation against retrieved evidence.
+- Gemini token usage and estimated cost tracking.
+- Docker Compose integration for FastAPI and PostgreSQL.
+- Automated testing with pytest and Ruff; GitHub Actions CI.
 
-### Run Locally
+### Run with Docker Compose
 
-1. Clone the repository.
-2. Configure the required variables in a local `.env` file.
-3. Start Docker Desktop.
-4. Run:
+Configure the local `.env` file with the necessary non-committed settings, start Docker Desktop, then run:
 
 ```powershell
 docker compose up -d --build
 ```
 
-5. Open the API documentation:
+Open the API documentation at http://localhost:8000/docs.
 
-http://localhost:8000/docs
-
-### Important Endpoints
+### Important endpoints
 
 | Endpoint | Description |
 |---|---|
-| GET /health | Application health |
-| GET /usage | Gemini usage statistics |
-| GET /api/techniques/search | Keyword search |
-| GET /api/techniques/bm25 | BM25 search |
-| GET /api/techniques/semantic | Semantic search |
-| GET /api/techniques/pgvector | PostgreSQL vector search |
-| POST /chat | Evidence-grounded Gemini chat |
-| POST /chat/stream | Streaming Gemini responses |
+| `GET /health` | Application health |
+| `GET /usage` | Gemini usage statistics |
+| `GET /api/techniques/search` | Keyword-based technique search |
+| `GET /api/techniques/bm25` | BM25 technique search |
+| `GET /api/techniques/semantic` | Semantic technique search |
+| `GET /api/techniques/pgvector` | PostgreSQL vector similarity search |
+| `GET /api/techniques/{technique_id}/explain` | Gemini-assisted technique explanation |
+| `POST /chat` | Retrieval-assisted Gemini chat |
+| `POST /chat/stream` | Streaming Gemini responses |
+| `POST /ask` | Week 3 document question-answering with citations |
 
 ### Testing
-
-Run:
 
 ```powershell
 python -m pytest -q
 python -m ruff check .
 ```
 
-Week 2 verification: 31 automated tests passed.
-GitHub Actions CI: successful.
+The recorded Week 2 checkpoint had **31 passing tests** and successful GitHub Actions CI. The later local Week 3 verification had **43 passing tests**.
