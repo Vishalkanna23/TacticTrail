@@ -1,0 +1,10 @@
+{"id":"Q01","query":"An employee received a malicious Word attachment by email. Identify the ATT&CK technique for the attachment and for a malicious phishing link.","gold_ids":["T1566.001","T1566.002"]}
+{"id":"Q02","query":"Endpoint security detected suspicious access to LSASS process memory. Which ATT&CK sub-technique is relevant?","gold_ids":["T1003.001"]}
+{"id":"Q03","query":"A Windows server runs a suspicious scheduled task for persistence after reboot. Which ATT&CK sub-technique is relevant?","gold_ids":["T1053.005"]}
+{"id":"Q04","query":"The attacker executes malicious PowerShell commands. Which ATT&CK sub-technique describes this behavior?","gold_ids":["T1059.001"]}
+{"id":"Q05","query":"Contrast PowerShell execution and Windows cmd.exe command-shell execution with their ATT&CK sub-technique IDs.","gold_ids":["T1059.001","T1059.003"]}
+{"id":"Q06","query":"One common password was tried against hundreds of accounts. Which ATT&CK sub-technique is this?","gold_ids":["T1110.003"]}
+{"id":"Q07","query":"During ransomware, attackers encrypted victim files, causing data to become inaccessible. Which ATT&CK technique is this?","gold_ids":["T1486"]}
+{"id":"Q08","query":"An adversary uses a stolen employee login to access another Windows machine through Remote Desktop. Name both techniques.","gold_ids":["T1078","T1021.001"]}
+{"id":"Q09","query":"An attacker exploited a public-facing customer portal to obtain initial access. Which ATT&CK technique applies?","gold_ids":["T1190"]}
+{"id":"Q10","query":"How many confirmed phishing incidents occurred in our bank's private retail unit last month?","gold_ids":[],"abstain":true}
